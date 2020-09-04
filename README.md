@@ -1,1 +1,0 @@
-This is a command line based sudoku puzzle solver
