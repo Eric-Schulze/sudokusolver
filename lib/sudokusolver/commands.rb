@@ -3,18 +3,22 @@
 require_relative "puzzle"
 
 module SudokuSolver
+    Command = Struct.new(:command, :args)
+
     module Commands
         extend self
         attr_reader :quit, :reset, :new, :print, :help, :solve
 
         def parse_commands (command)
-            case command.downcase
+            command_parsed = command_split(command)
+
+            case command_parsed.command.downcase.strip
             when "quit"
                 quit
             when "reset"
                 reset
             when "new"
-                new_puzzle
+                new_puzzle(command_parsed.args)
             when "print"
                 print_puzzle
             when "help"
@@ -26,6 +30,18 @@ module SudokuSolver
             else
                 ""
             end
+        end
+
+        def command_split (command)
+            split = command.index(/\s/)
+            command_text = command[0..split]
+
+            command_args = command[(split + 1)..-1](/\s-/)
+            command_args.each do n
+                n.slice!(/-/)
+            end
+
+            return Command.new()
         end
 
         def command_get
@@ -54,22 +70,32 @@ module SudokuSolver
             command_get
         end
 
-        def new_puzzle
-            @@puzzle = Puzzle.new
+        def new_puzzle (args)
+            if args[0].nil? && args[0] == "bulk"
+                # TODO allow for bulk insert of 9 lines 
+                #allows for copy and paste of entire puzzle
+            else
+                @@puzzle = Puzzle.new
 
-            1.upto(10) do |i|
-                loop do 
-                    puts enter_row(i)
-                    row_input = gets.chomp
-                    break if !row_input.empty?
+                1.upto(9) do |i|
+                    loop do 
+                        puts enter_row(i)
+                        row_input = gets.chomp
+                        break if !row_input.empty?
 
-                    row_arr = parse_row(row_input)
+                        row_validation = parse_row(row_input)
 
+                        if row_validation.isValid?
+                            @@puzzle.insert_row(row_validation.rowArray)
+                            break
+                        else
+                            puts row_validation.errorMsg
+                        end
+                    end
                 end
-                
-                @@puzzle.insert_row(row_arr)
             end
 
+            command_get
         end
 
         def print_puzzle
@@ -122,6 +148,7 @@ module SudokuSolver
 
             floatArr = []
             arr.each_with_index do |n, index|
+                # TODO allow for underscores representing empty boxes
                 if !n.is_int?
                     errMsg = "Entry at position #{index + 1} must be a digit."
                     valid = false
