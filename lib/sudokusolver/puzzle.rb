@@ -6,23 +6,26 @@ module SudokuSolver
     PuzzleRowValidation = Struct.new(:isValid?, :errorMsg, :rowArray)
 
     class Puzzle
-        attr_reader :grid
+        attr_accessor :grid
 
         def initialize()
-
+            @grid = Array.new
         end
 
         def to_s
+            puzzle_s = ""
             9.times do |i|
                 9.times do |j|
                     if !@grid[i][j].nil? && @grid[i][j] > 0
-                        print "#{@grid[i][j]} "
+                        puzzle_s += "#{@grid[i][j]} "
                     else
-                        print "_ "
+                        puzzle_s += "_ "
                     end
                 end
-                print "\n"
+                puzzle_s += "\n"
             end
+
+            return puzzle_s
         end
 
         def self.validate_row(arr)

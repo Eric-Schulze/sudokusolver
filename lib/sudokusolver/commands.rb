@@ -28,20 +28,38 @@ module SudokuSolver
             when "solve"
                 #do solve here
             else
-                ""
+                puts "Invalid Command"
+                command_get
             end
         end
 
         def command_split (command)
             split = command.index(/\s/)
-            command_text = command[0..split]
+            unless split.nil?
+                command_text = command[0..split]
 
-            command_args = command[(split + 1)..-1](/\s-/)
-            command_args.each do n
-                n.slice!(/-/)
+                command_args = command[(split + 1)..-1].split(/\s-/) 
+
+                command_hashes = Hash.new
+                command_args.each do |n|
+                    n.slice!(/-/)
+                    puts n
+
+                    arg_kvp = n.split(/\s/)
+                    command_hashes[arg_kvp[0]] = arg_kvp[1]
+                end
+            else
+                command_text = command
+                command_hashes = Hash.new
             end
 
-            return Command.new()
+            puts "Command Text: #{command_text}"
+            puts "Command Args:"
+            command_hashes.each do |key, value|
+                puts "#{key}: #{value}"
+            end
+
+            return Command.new(command_text, command_hashes)
         end
 
         def command_get
@@ -71,12 +89,31 @@ module SudokuSolver
         end
 
         def new_puzzle (args)
-            if args[0].nil? && args[0] == "bulk"
-                # TODO allow for bulk insert of 9 lines 
-                #allows for copy and paste of entire puzzle
-            else
-                @@puzzle = Puzzle.new
+            @@puzzle = Puzzle.new
 
+            if args.has_key?("path")
+                # TODO allow for bulk insert of 9 lines by txt file
+                #allows for copy and paste of entire puzzle
+                line_count = 0
+                IO.foreach(args["path"]){ |line|
+                    line_count += 1
+                    if line_count > 9
+                        break
+                    end
+
+                    puts line
+
+                    row_validation = parse_row(line)
+
+                    if row_validation.isValid?
+                        @@puzzle.insert_row(line_count - 1, row_validation.rowArray)
+                    else
+                        puts "There was an error in line #{line_count}"
+                        puts row_validation.errorMsg
+                        break
+                    end
+                }
+            else
                 1.upto(9) do |i|
                     loop do 
                         puts enter_row(i)
@@ -86,7 +123,7 @@ module SudokuSolver
                         row_validation = parse_row(row_input)
 
                         if row_validation.isValid?
-                            @@puzzle.insert_row(row_validation.rowArray)
+                            @@puzzle.insert_row(i, row_validation.rowArray)
                             break
                         else
                             puts row_validation.errorMsg
@@ -100,6 +137,8 @@ module SudokuSolver
 
         def print_puzzle
             puts @@puzzle.to_s
+
+            command_get
         end
 
         def help
@@ -149,16 +188,18 @@ module SudokuSolver
             floatArr = []
             arr.each_with_index do |n, index|
                 # TODO allow for underscores representing empty boxes
-                if !n.is_int?
+                begin
+                    digit = Integer(n)
+                rescue 
                     errMsg = "Entry at position #{index + 1} must be a digit."
                     valid = false
                     break
                 end
 
-                floatArr[index] = Float(n)
+                floatArr[index] = digit
             end
 
-            return Puzzle.validate_row arr
+            return Puzzle.validate_row floatArr
         end
 
         class String
