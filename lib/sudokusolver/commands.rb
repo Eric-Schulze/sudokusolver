@@ -26,7 +26,7 @@ module SudokuSolver
             when "edit"
                 edit
             when "solve"
-                #do solve here
+                @@puzzle.solve_puzzle
             else
                 puts "Invalid Command"
                 command_get
@@ -53,11 +53,13 @@ module SudokuSolver
                 command_hashes = Hash.new
             end
 
+=begin      
             puts "Command Text: #{command_text}"
             puts "Command Args:"
             command_hashes.each do |key, value|
                 puts "#{key}: #{value}"
             end
+=end
 
             return Command.new(command_text, command_hashes)
         end
@@ -81,7 +83,7 @@ module SudokuSolver
         end
 
         def reset 
-            @@puzzle = puzzle.new
+            @@puzzle = Puzzle.new
 
             puts "The puzzle has been reset."
 
@@ -92,8 +94,6 @@ module SudokuSolver
             @@puzzle = Puzzle.new
 
             if args.has_key?("path")
-                # TODO allow for bulk insert of 9 lines by txt file
-                #allows for copy and paste of entire puzzle
                 line_count = 0
                 IO.foreach(args["path"]){ |line|
                     line_count += 1
@@ -118,7 +118,7 @@ module SudokuSolver
                     loop do 
                         puts enter_row(i)
                         row_input = gets.chomp
-                        break if !row_input.empty?
+                        break if row_input.empty?
 
                         row_validation = parse_row(row_input)
 
@@ -158,20 +158,32 @@ module SudokuSolver
         def edit
             puts "Which row would you like to edit?"
             row_index = gets.chomp
-            if !row_index.is_int?
+
+            begin
+                row_int = Integer(row_index)
+
+                if row_int > 9 || row_int < 1
+                    puts "Please enter a digit 1-9."
+                    edit
+                else
+                    puts enter_row(row_int)
+                    row = gets.chomp
+    
+                    row_validation = parse_row(row)
+
+                    if row_validation.isValid?
+                        @@puzzle.insert_row(row_int - 1, row_validation.rowArray)
+                    else
+                        puts row_validation.errorMsg
+                        edit
+                    end
+                end
+            rescue
                 puts "Please enter a digit 1-9."
                 edit
-            elsif Float(row_index) > 9 || Float(row_index) < 1
-                puts "Please enter a digit 1-9."
-                edit
-            else
-                puts enter_row(row_index)
-                row = gets.chomp
-
-                row_arr = parse_row(row)
-
-                @@puzzle.insert_row(row_arr)
             end
+
+            command_get
         end
 
         def enter_row (index)
@@ -179,27 +191,10 @@ module SudokuSolver
         end
 
         def parse_row (row_string) 
-            valid = true
-            errMsg = ""
-
             row_string.slice!(/,/)
             arr = row_string.split(/\t|\s/)
 
-            floatArr = []
-            arr.each_with_index do |n, index|
-                # TODO allow for underscores representing empty boxes
-                begin
-                    digit = Integer(n)
-                rescue 
-                    errMsg = "Entry at position #{index + 1} must be a digit."
-                    valid = false
-                    break
-                end
-
-                floatArr[index] = digit
-            end
-
-            return Puzzle.validate_row floatArr
+            return Puzzle.validate_row arr
         end
 
         class String
