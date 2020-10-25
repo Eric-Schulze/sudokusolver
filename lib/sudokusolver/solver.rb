@@ -27,9 +27,12 @@ module SudokuSolver
         end
 
         def check_group_for_single_digits (get_missing_digits)
-            digit_arr = get_missing_digits
-
-
+            group_arr = get_missing_digits
+            
+            group_arr.each
+            if digit_arr.length == 1
+                
+            end
         end
 
         def get_missing_digits_in_bands
