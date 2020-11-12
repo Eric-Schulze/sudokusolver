@@ -9,6 +9,10 @@ module SudokuSolver
         extend self
         attr_reader :quit, :reset, :new, :print, :help, :solve
 
+        def initialize()
+            @puzzle = Puzzle.new
+        end
+
         def parse_commands (command)
             command_parsed = command_split(command)
 
@@ -26,7 +30,7 @@ module SudokuSolver
             when "edit"
                 edit
             when "solve"
-                @@puzzle.solve_puzzle
+                @puzzle.solve_puzzle
             else
                 puts "Invalid Command"
                 command_get
@@ -72,7 +76,7 @@ module SudokuSolver
         end
 
         def command_start
-            @@puzzle = Puzzle.new
+            @puzzle = Puzzle.new
 
             command_get
         end
@@ -83,7 +87,7 @@ module SudokuSolver
         end
 
         def reset 
-            @@puzzle = Puzzle.new
+            @puzzle = Puzzle.new
 
             puts "The puzzle has been reset."
 
@@ -91,28 +95,33 @@ module SudokuSolver
         end
 
         def new_puzzle (args)
-            @@puzzle = Puzzle.new
+            @puzzle = Puzzle.new
 
             if args.has_key?("path")
                 line_count = 0
-                IO.foreach(args["path"]){ |line|
-                    line_count += 1
-                    if line_count > 9
-                        break
+                if !File.file?(args["path"])
+                    puts "Invalid file."
+                else
+                    puts "Inserted Values:"
+                    IO.foreach(args["path"]) do |line|
+                        line_count += 1
+                        if line_count > 9
+                            break
+                        end
+
+                        puts line
+
+                        row_validation = parse_row(line)
+
+                        if row_validation.isValid?
+                            @puzzle.insert_row(line_count, row_validation.rowArray)
+                        else
+                            puts "There was an error in line #{line_count}"
+                            puts row_validation.errorMsg
+                            break
+                        end
                     end
-
-                    puts line
-
-                    row_validation = parse_row(line)
-
-                    if row_validation.isValid?
-                        @@puzzle.insert_row(line_count - 1, row_validation.rowArray)
-                    else
-                        puts "There was an error in line #{line_count}"
-                        puts row_validation.errorMsg
-                        break
-                    end
-                }
+                end
             else
                 1.upto(9) do |i|
                     loop do 
@@ -123,7 +132,7 @@ module SudokuSolver
                         row_validation = parse_row(row_input)
 
                         if row_validation.isValid?
-                            @@puzzle.insert_row(i, row_validation.rowArray)
+                            @puzzle.insert_row(i, row_validation.rowArray)
                             break
                         else
                             puts row_validation.errorMsg
@@ -136,7 +145,7 @@ module SudokuSolver
         end
 
         def print_puzzle
-            puts @@puzzle.to_s
+            puts @puzzle.to_s
 
             command_get
         end
@@ -172,7 +181,7 @@ module SudokuSolver
                     row_validation = parse_row(row)
 
                     if row_validation.isValid?
-                        @@puzzle.insert_row(row_int - 1, row_validation.rowArray)
+                        @puzzle.insert_row(row_int, row_validation.rowArray)
                     else
                         puts row_validation.errorMsg
                         edit

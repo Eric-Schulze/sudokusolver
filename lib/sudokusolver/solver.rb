@@ -15,92 +15,102 @@ module SudokuSolver
         end
 
         def start_solve
+            #puts "Start Solve Start"
+
             check_for_single_digits
+
+            #puts "Start Solve Complete"
         end
 
         def check_for_single_digits
-            check_group_for_single_digits(get_missing_digits_in_bands)
+            #puts "Check Single Digits Start"
 
-            check_group_for_single_digits(get_missing_digits_in_stacks)
+            check_group_for_single_digits(@puzzle.bands)
 
-            check_group_for_single_digits(get_missing_digits_in_blocks)
+            check_group_for_single_digits(@puzzle.stacks)
+
+            check_group_for_single_digits(@puzzle.blocks)
+
+            #puts "Check Single Digits Complete"
         end
 
-        def check_group_for_single_digits (get_missing_digits)
-            group_arr = get_missing_digits
-            
-            group_arr.each
-            if digit_arr.length == 1
-                
-            end
-        end
+        def check_group_for_single_digits (group_hash)
+            #puts "Check Single Digits in Group #{Enums.enum_to_str(GroupType, group_hash[1].group_type)} Start"
 
-        def get_missing_digits_in_bands
-            missing_digits = []
-
-            9.times do |i|
-                missing_digits[i] = get_missing_digits_from_group(@puzzle.grid[i])
-
-                puts "Missing Digits in Band #{i + 1}: #{missing_digits[i]}"
-            end
-
-            return missing_digits
-        end
-
-        def get_missing_digits_in_stacks
-            missing_digits = []
-
-            9.times do |j|
-                stack_positions = []
-                9.times do |i|
-                    stack_positions.push(@puzzle.grid[i][j])
-                end
-
-                missing_digits[j] = get_missing_digits_from_group(stack_positions)
-
-                puts "Missing Digits in Stack #{j + 1}: #{missing_digits[j]}"
-            end
-
-            return missing_digits
-        end
-
-        def get_missing_digits_in_blocks
-            missing_digits = []
-
-            3.times do |i|
-                3.times do |j|
-                    stack_positions = []
-                    3.times do |m|
-                        3.times do |n|
-                            stack_positions.push(@puzzle.grid[3 * i + n][3 * j + m])
-                        end
-                    end
-
-                    missing_digits[3 * i + j] = get_missing_digits_from_group(stack_positions)
-
-                    puts "Missing Digits in Block #{(3 * i + j) + 1}: #{missing_digits[3 * i + j]}"
+            1.upto(9) do |index|
+                group = group_hash[index]
+                if group.solved?
+                    next
+                elsif group.missing_digits_arr.length == 0 && !group.solved?
+                    group.solved= true
+                elsif group.missing_digits_arr.length == 1
+                    solve_group_with_single_missing_value(group)
+                elsif group.missing_digits_arr.length >= 2
+                    Puzzle.set_position_possibilities(group)
                 end
             end
 
-            return missing_digits
+            #puts "Check Single Digits in Group #{Enums.enum_to_str(GroupType, group_hash[1].group_type)} Complete"
         end
 
-        def get_missing_digits_from_group(group_arr)
-            digits = solution_options
+        def solve_group_with_single_missing_value(group)
+            puts "Solve Single Missing Value Start"
 
-            group_arr.each_with_index do |n, index|
-                digits.delete(n.value)
+            unsolved_pos = group.position_ids_arr.select { |key, pos_id| 
+                pos = ObjectSpace._id2ref(pos_id)
+                pos.value == 0 && pos.possible_values.length == 1
+            }
+            if unsolved_pos.length == 1
+                solve_position(group, unsolved_pos.first(), ObjectSpace._id2ref(unsolved_pos.first()).value)
             end
 
-            return digits
+            puts "Solve Single Missing Value Complete"
         end
 
-        def solve_position
+        def solve_position(group, position_id, value)
+            puts "Solve Position Start"
 
-        end
+            position = ObjectSpace._id2ref(pos_id)
 
-        def remove_position_posibilities
+            # Set value and possible values for position
+            pos.value = n
+            pos.possible_values = n.to_a
 
+            # Set possible values array for all positions in the row
+            1.upto(9) do |i|
+                pos_in_row = @grid[band_index.to_s + i.to_s]
+                if i == stack_index
+                    pos_in_row.possible_values = n.to_a
+                else
+                    pos_in_row.possible_values.delete(n)
+                end
+            end
+
+            # Remove value from each group's missing digits array
+            @puzzle.bands.select { |key, band| 
+                band.group_type == GroupType::BAND && band.id == band_index
+            }.first()[1].missing_digits_arr.delete(n)
+
+            @puzzle.stacks.select { |key, stack| 
+                stack.group_type == GroupType::STACK && stack.id == (stack_index + 1)
+            }.first()[1].missing_digits_arr.delete(n)
+
+            @puzzle.blocks.select { |key, block| 
+                block.group_type == GroupType::BLOCK && block.id == get_block(band_index, (stack_index + 1))
+            }.first()[1].missing_digits_arr.delete(n)
+
+            # rework to not need group
+            if group.missing_digits_arr.length == 0
+                group.solved= true
+            end
+
+            Puzzle.set_position_possibilities(group)
+            # rework to not need group
+
+            puzzle.currentNumberSolved += 1
+            puzzle.currentNumberUnsolved -= 1
+
+            puts "Solve Position Complete"
         end
     end
 end
